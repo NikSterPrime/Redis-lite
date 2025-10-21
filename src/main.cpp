@@ -15,8 +15,6 @@ std::vector<std::string> tokenize(const std::string &input) {
     return tokens;
 }
 int main() {
-    unordered_map<string,string> store;
-
     cout<< "Welcome to the Redis-lite, here you need to use the SET, GET and DEL commands"<<endl<<"to enter values to the Redis store for faster and efficient retrieval."<<endl;
     cout<<"To exit the program, type EXIT"<<endl;
 
@@ -30,6 +28,9 @@ int main() {
             cout<<"Exiting the Redis-lite. Goodbye!"<<endl;
             break;
         }
+        const vector<string> tokens = tokenize(command);
+        if(tokens.size() == 0) continue;
+        commandExecute(tokens);
     }
     exit(0);
     return 0;
