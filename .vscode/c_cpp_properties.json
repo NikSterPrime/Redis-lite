@@ -1,0 +1,20 @@
+{
+  "configurations": [
+    {
+      "name": "mingw64-posix",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/include"
+      ],
+      "defines": [],
+      "compilerPath": "C:/msys64/mingw64/bin/g++.exe",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "gcc-x64",
+      "compilerArgs": [
+        "-pthread"
+      ]
+    }
+  ],
+  "version": 4
+}

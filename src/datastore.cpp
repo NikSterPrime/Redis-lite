@@ -3,10 +3,12 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <mutex>
 using namespace std;
 
 //Declare global variables
 static unordered_map<string,string> datastore;
+static mutex datastore_mutex;
 
 //called by commandExecute
 void setHandler(const vector<string> &tokens)
@@ -67,14 +69,17 @@ void commandExecute(const vector<string> &tokens)
     string cmd = tokens[0];
     if(cmd == "SET")
     {   
+        lock_guard<mutex> lock(datastore_mutex);
         setHandler(tokens);
     }
     else if(cmd == "GET")
     {
+        lock_guard<mutex> lock(datastore_mutex);
         getHandler(tokens);
     }
     else if(cmd == "DEL")
     {
+        lock_guard<mutex> lock(datastore_mutex);
         delHandler(tokens);
     }
     else if(cmd == "HELP")
