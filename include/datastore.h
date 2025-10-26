@@ -1,6 +1,9 @@
-#include <string>
-#include <vector>
-#include <mutex>
-using namespace std;
+#ifndef DATASTORE_H
+#define DATASTORE_H
 
-void commandExecute(const vector<string> &tokens);
+#include <string>
+
+// Single entry: pass raw command; tokenization happens inside datastore.cpp
+void commandExecute(const std::string &command);
+
+#endif // DATASTORE_H
