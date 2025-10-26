@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <sstream>
 #include <shared_mutex>
 #include <mutex>
 using namespace std;
@@ -12,8 +13,18 @@ static unordered_map<string,string> datastore;
 static shared_mutex mutx;
 
 //called by commandExecute
+std::vector<std::string> tokenize(const std::string &input) {
+    std::istringstream iss(input);
+    std::vector<std::string> tokens;
+    std::string token;
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
 void setHandler(const vector<string> &tokens)
 {
+    unique_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 3)
     {
         cout<<"Error: SET command requires exactly 2 arguments."<<endl;
@@ -26,6 +37,7 @@ void setHandler(const vector<string> &tokens)
 }
 void getHandler(const vector<string> &tokens)
 {
+    shared_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 2)
     {
         cout<<"Error: GET expects exactly 1 argument."<<endl;
@@ -45,6 +57,7 @@ void getHandler(const vector<string> &tokens)
 }
 void delHandler(const vector<string> &tokens)
 {
+    unique_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 2)
     {
         cout<<"Error: DEL expects exactly 1 argument."<<endl;
@@ -64,23 +77,22 @@ void delHandler(const vector<string> &tokens)
     
 }
 
-//called by main.cpp
-void commandExecute(const vector<string> &tokens)
+// Single entry point: take raw command, tokenize here, then dispatch
+void commandExecute(const string &command)
 {
+    const vector<string> tokens = tokenize(command);
+    if (tokens.empty()) return;
     string cmd = tokens[0];
     if(cmd == "SET")
     {   
-        unique_lock<shared_mutex> lock(mutx);
         setHandler(tokens);
     }
     else if(cmd == "GET")
     {
-        shared_lock<shared_mutex> lock(mutx);
         getHandler(tokens);
     }
     else if(cmd == "DEL")
     {
-        unique_lock<shared_mutex> lock(mutx);
         delHandler(tokens);
     }
     else if(cmd == "HELP")

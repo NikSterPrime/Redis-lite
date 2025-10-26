@@ -3,18 +3,26 @@
 #include <vector>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include "datastore.h"
+#include "server.h"
 using namespace std;
-std::vector<std::string> tokenize(const std::string &input) {
-    std::istringstream iss(input);
-    std::vector<std::string> tokens;
-    std::string token;
-    while (iss >> token) {
-        tokens.push_back(token);
+int main(int argc, char* argv[]) {
+    // Check for --server flag
+    bool serverMode = false;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--server") == 0) {
+            serverMode = true;
+            break;
+        }
     }
-    return tokens;
-}
-int main() {
+
+    if (serverMode) {
+        // Run TCP server mode
+        return TCPServer();
+    }
+
+    // Default: CLI mode
     cout<< "Welcome to the Redis-lite, here you need to use the SET, GET and DEL commands"<<endl<<"to enter values to the Redis store for faster and efficient retrieval."<<endl;
     cout<<"To exit the program, type EXIT"<<endl;
 
@@ -28,10 +36,8 @@ int main() {
             cout<<"Exiting the Redis-lite. Goodbye!"<<endl;
             break;
         }
-        const vector<string> tokens = tokenize(command);
-        if(tokens.size() == 0) continue;
-        commandExecute(tokens);
+        if(command.size() == 0) continue;
+        commandExecute(command);
     }
-    exit(0);
     return 0;
 }
