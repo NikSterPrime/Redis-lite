@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Redis-Lite",
+      "type": "shell",
+      "command": "C:/msys64/mingw64/bin/g++.exe",
+      "args": [
+        "-std=c++17",
+        "-pthread",
+        "-o",
+        "redis",
+        "src/main.cpp",
+        "src/datastore.cpp",
+        "-I",
+        "include"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$gcc"]
+    }
+  ]
+}
+
