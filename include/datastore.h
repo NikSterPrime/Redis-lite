@@ -2,8 +2,8 @@
 #define DATASTORE_H
 
 #include <string>
-
+using namespace std;
 // Single entry: pass raw command; tokenization happens inside datastore.cpp
-void commandExecute(const std::string &command);
+string commandExecute(const string &command);
 
 #endif // DATASTORE_H

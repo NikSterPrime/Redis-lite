@@ -3,7 +3,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 using namespace std;
-int client_call()
+int main()
 {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2,2),&wsaData);
@@ -14,13 +14,20 @@ int client_call()
     serverAddr.sin_port = htons(8080);
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    connect(sock,(sockaddr*)&serverAddr,sizeof(serverAddr));
+    if(connect(sock,(sockaddr*)&serverAddr,sizeof(serverAddr)))
+    {
+        cout<<"Connection Failed"<<endl;
+        return 1;
+    }
 
     while(true)
     {
-        char* msg;
-        cin>>msg;
+        char msg[1024];
+        cin.getline(msg, sizeof(msg));
         send(sock, msg, strlen(msg), 0);
+        //need to make it such that message is sent and it can receive text over package
+        recv(sock, msg, sizeof(msg),0);
+        cout<<"Server Response: "<<msg<<endl;
     }
 
     closesocket(sock);

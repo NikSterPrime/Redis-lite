@@ -9,7 +9,7 @@
 
 using namespace std;
 
-int TCPServer() {
+int main() {
     WSADATA wsa{};
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         cerr << "WSAStartup failed" << endl;
@@ -55,7 +55,7 @@ int TCPServer() {
         thread clientThread([clientSocket]() {
             string lineBuffer;  // accumulator for partial lines
             char tempBuf[1024];
-            
+            string response;
             while (true) {
                 int received = recv(clientSocket, tempBuf, sizeof(tempBuf) - 1, 0);
                 if (received <= 0) {
@@ -86,13 +86,14 @@ int TCPServer() {
                     
                     // Check for EXIT command
                     if (line == "EXIT") {
-                        commandExecute(line);  // Let it print goodbye message
+                        response = commandExecute(line);  // Let it print goodbye message
                         closesocket(clientSocket);
                         return;
                     }
                     
                     // Execute the command
-                    commandExecute(line);
+                    response = commandExecute(line);
+                    send(clientSocket, response.c_str(), response.size(), 0);
                 }
             }
             
