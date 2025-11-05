@@ -1,0 +1,4 @@
+SET a 1
+GET a
+DEL a
+EXIT

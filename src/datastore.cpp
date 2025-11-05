@@ -22,78 +22,72 @@ std::vector<std::string> tokenize(const std::string &input) {
     }
     return tokens;
 }
-void setHandler(const vector<string> &tokens)
+string setHandler(const vector<string> &tokens)
 {
     unique_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 3)
     {
-        cout<<"Error: SET command requires exactly 2 arguments."<<endl;
-        return;
+        return "Error: SET command requires exactly 2 arguments.";
     }
     string key = tokens[1];
     string value = tokens[2];
     datastore[key] = value;
-    cout<<value<<" stored for "<<key<<endl;
+    return "Value " + value +" for key "+ key +" set successfully.";
 }
-void getHandler(const vector<string> &tokens)
+string getHandler(const vector<string> &tokens)
 {
     shared_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 2)
     {
-        cout<<"Error: GET expects exactly 1 argument."<<endl;
-        return;
+        return "Error: GET expects exactly 1 argument.";
     }
     string key = tokens[1];
     if(datastore.find(key) != datastore.end())
     {
-        cout<<datastore[key]<<endl;
-        return;
+        return datastore[key];
     }
     else{
-        cout<<"Argument doesnt exist in store"<<endl;
-        return;
+        return "Error: Key " + key + " not found.";
     }
     
 }
-void delHandler(const vector<string> &tokens)
+string delHandler(const vector<string> &tokens)
 {
     unique_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 2)
     {
-        cout<<"Error: DEL expects exactly 1 argument."<<endl;
-        return;
+        return "Error: DEL expects exactly 1 argument.";
     }
     string key = tokens[1];
     if(datastore.find(key) != datastore.end())
     {
         datastore.erase(key);
-        cout<<"Key "<<key<<" deleted successfully."<<endl;
-        return;
+        return "Key " + key + " deleted successfully.";
     }
     else{
-        cout<<"Argument doesnt exist in store"<<endl;
-        return;
+        return "Error: Key " + key + " not found.";
     }
     
 }
 
 // Single entry point: take raw command, tokenize here, then dispatch
-void commandExecute(const string &command)
+string commandExecute(const string &command)
 {
     const vector<string> tokens = tokenize(command);
-    if (tokens.empty()) return;
+    if (tokens.empty()) return "Error: Empty command.";
     string cmd = tokens[0];
+    string response;
     if(cmd == "SET")
     {   
-        setHandler(tokens);
+        response =  setHandler(tokens);
     }
     else if(cmd == "GET")
     {
-        getHandler(tokens);
+        response = getHandler(tokens);
     }
     else if(cmd == "DEL")
     {
-        delHandler(tokens);
+        response = delHandler(tokens);
     }
     else if(cmd == "HELP")
     {
@@ -106,5 +100,6 @@ void commandExecute(const string &command)
     else{
         cout<<"Error: Unknown command"<<endl;
     }
+    return response;
 
 }

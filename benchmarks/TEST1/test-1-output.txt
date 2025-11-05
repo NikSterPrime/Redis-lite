@@ -1,0 +1,9 @@
+Connected to server successfully
+Server Response: OK
+
+Server Response: OK
+
+Server Response: OK
+
+Server Response: GOODBYE
+
