@@ -19,15 +19,34 @@ int main()
         cout<<"Connection Failed"<<endl;
         return 1;
     }
+    else{
+        cout<<"Connected to server successfully"<<endl;
+    }
 
     while(true)
     {
-        char msg[1024];
-        cin.getline(msg, sizeof(msg));
-        send(sock, msg, strlen(msg), 0);
-        //need to make it such that message is sent and it can receive text over package
-        recv(sock, msg, sizeof(msg),0);
-        cout<<"Server Response: "<<msg<<endl;
+        string line;
+        if (!getline(cin, line)) {
+            break; // EOF or error
+        }
+        
+        // Send command with newline terminator
+        line += "\n";
+        send(sock, line.c_str(), line.size(), 0);
+        
+        // Receive response
+        char buffer[1024] = {0};
+        int received = recv(sock, buffer, sizeof(buffer) - 1, 0);
+        if (received <= 0) {
+            break; // Connection closed or error
+        }
+        buffer[received] = '\0';
+        cout << "Server Response: " << buffer;
+        
+        // Check if server sent GOODBYE (EXIT command response)
+        if (string(buffer).find("GOODBYE") != string::npos) {
+            break;
+        }
     }
 
     closesocket(sock);
