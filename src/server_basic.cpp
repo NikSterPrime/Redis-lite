@@ -83,8 +83,8 @@ int main() {
                     goto close_client;
                 }
 
-                commandExecute(line);
-                send_text(clientSocket, string("OK\r\n"));
+                string ans = commandExecute(line);
+                send_text(clientSocket, ans);
             }
         }
 
