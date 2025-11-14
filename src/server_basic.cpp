@@ -2,6 +2,7 @@
 #include <string>
 #include <winsock2.h>
 #include "datastore.h"
+#include <sys/time.h>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -51,41 +52,8 @@ int main() {
     cout << "Waiting for incoming connections..." << endl;
 
     while (true) {
-        SOCKET clientSocket = accept(serverSocket, NULL, NULL);
-        if (clientSocket == INVALID_SOCKET) {
-            cerr << "accept() failed" << endl;
-            break;
-        }
-
-        cout << "Client connected." << endl;
-        string lineBuffer;
-        char tempBuf[1024];
-
-        for (;;) {
-            int received = recv(clientSocket, tempBuf, sizeof(tempBuf) - 1, 0);
-            if (received <= 0) {
-                break; // disconnect or error
-            }
-
-            tempBuf[received] = '\0';
-            lineBuffer.append(tempBuf, received);
-
-            size_t pos;
-            while ((pos = lineBuffer.find('\n')) != string::npos) {
-                string line = lineBuffer.substr(0, pos);
-                lineBuffer.erase(0, pos + 1);
-                if (!line.empty() && line.back() == '\r') line.pop_back();
-                if (line.empty()) continue;
-
-                if (line == "EXIT")
-                {
-                    send_text(clientSocket, string("GOODBYE\r\n"));
-                    goto close_client;
-                }
-
-                string ans = commandExecute(line);
-                send_text(clientSocket, ans);
-            }
+		FD_ZERO(&readfds);
+		
         }
 
 close_client:

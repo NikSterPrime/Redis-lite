@@ -10,7 +10,6 @@ using namespace std;
 
 //Declare global variables
 static unordered_map<string,string> datastore;
-static shared_mutex mutx;
 
 //called by commandExecute
 std::vector<std::string> tokenize(const std::string &input) {
@@ -24,7 +23,6 @@ std::vector<std::string> tokenize(const std::string &input) {
 }
 string setHandler(const vector<string> &tokens)
 {
-    unique_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 3)
     {
         return "Error: SET command requires exactly 2 arguments.";
@@ -36,7 +34,6 @@ string setHandler(const vector<string> &tokens)
 }
 string getHandler(const vector<string> &tokens)
 {
-    shared_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 2)
     {
         return "Error: GET expects exactly 1 argument.";
@@ -53,7 +50,6 @@ string getHandler(const vector<string> &tokens)
 }
 string delHandler(const vector<string> &tokens)
 {
-    unique_lock<shared_mutex> lock(mutx);
     if(tokens.size() != 2)
     {
         return "Error: DEL expects exactly 1 argument.";
