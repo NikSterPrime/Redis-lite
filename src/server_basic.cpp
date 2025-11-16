@@ -51,17 +51,96 @@ int main() {
     cout << "Server started on port 8080" << endl;
     cout << "Waiting for incoming connections..." << endl;
 
+    int clientSockets[FD_SETSIZE];
+    for (int i = 0; i < FD_SETSIZE; i++) {
+        clientSockets[i] = -1;
+    }
+
+    int num_clients = 0;
+    fd_set readfds;
+
     while (true) {
-		FD_ZERO(&readfds);
-		
+        FD_ZERO(&readfds);
+
+        FD_SET(serverSocket, &readfds);
+        int max_fd = serverSocket;
+
+        for (int i = 0; i < num_clients; i++) {
+            if (clientSockets[i] != -1) {
+                FD_SET(clientSockets[i], &readfds);
+                if (clientSockets[i] > max_fd)
+                    max_fd = clientSockets[i];
+            }
         }
 
-close_client:
-        closesocket(clientSocket);
-        cout << "Client disconnected." << endl;
+        int activity = select(max_fd + 1, &readfds, NULL, NULL, NULL);
+
+        if (FD_ISSET(serverSocket, &readfds)) {
+            int newSocket = accept(serverSocket, NULL, NULL);
+            if (newSocket == INVALID_SOCKET) {
+                cerr << "accept() failed" << endl;
+                break;
+            }
+            clientSockets[num_clients++] = newSocket;
+            cout << "New client connected: FD " << newSocket << endl;
+        }
+
+        for (int i = 0; i < num_clients; i++) {
+            int fd = clientSockets[i];
+
+            if (fd != -1 && FD_ISSET(fd, &readfds)) {
+
+                string lineBuffer;
+                char tempBuf[1024];
+                int received = recv(fd, tempBuf, sizeof(tempBuf) - 1, 0);
+
+                if (received <= 0) {
+                    // disconnect client
+                    closesocket(fd);
+                    clientSockets[i] = -1;
+                    continue;
+                }
+
+                tempBuf[received] = '\0';
+                lineBuffer.append(tempBuf, received);
+
+                size_t pos;
+                while ((pos = lineBuffer.find('\n')) != string::npos) {
+                    string line = lineBuffer.substr(0, pos);
+                    lineBuffer.erase(0, pos + 1);
+
+                    if (!line.empty() && line.back() == '\n')
+                        line.pop_back();
+                    if (line.empty())
+                        continue;
+
+                    if (line == "EXIT") {
+                        send_text(fd, "GOODBYE\r\n");
+
+                        // Properly disconnect inside loop
+                        closesocket(fd);
+                        clientSockets[i] = -1;
+                        cout << "Client disconnected." << endl;
+                        break;
+                    }
+
+                    string ans = commandExecute(line);
+                    send_text(fd, ans);
+                }
+            }
+        }
+    }
+
+    // close all clients on exit
+    for (int i = 0; i < num_clients; i++) {
+        if (clientSockets[i] != -1)
+            closesocket(clientSockets[i]);
     }
 
     closesocket(serverSocket);
     WSACleanup();
     return 0;
 }
+
+
+
