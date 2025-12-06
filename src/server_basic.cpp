@@ -2,6 +2,8 @@
 #include <string>
 #include <winsock2.h>
 #include "datastore.h"
+#include <sys/time.h>
+#include <chrono>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -40,7 +42,7 @@ int main() {
         return 1;
     }
 
-    if (listen(serverSocket, 1) == SOCKET_ERROR) {
+    if (listen(serverSocket, 64) == SOCKET_ERROR) {
         cerr << "listen() failed" << endl;
         closesocket(serverSocket);
         WSACleanup();
@@ -50,50 +52,100 @@ int main() {
     cout << "Server started on port 8080" << endl;
     cout << "Waiting for incoming connections..." << endl;
 
+    int clientSockets[FD_SETSIZE];
+    for (int i = 0; i < FD_SETSIZE; i++) {
+        clientSockets[i] = -1;
+    }
+
+    int num_clients = 0;
+    fd_set readfds;
+
     while (true) {
-        SOCKET clientSocket = accept(serverSocket, NULL, NULL);
-        if (clientSocket == INVALID_SOCKET) {
-            cerr << "accept() failed" << endl;
-            break;
-        }
+        FD_ZERO(&readfds);
 
-        cout << "Client connected." << endl;
-        string lineBuffer;
-        char tempBuf[1024];
-
-        for (;;) {
-            int received = recv(clientSocket, tempBuf, sizeof(tempBuf) - 1, 0);
-            if (received <= 0) {
-                break; // disconnect or error
+        FD_SET(serverSocket, &readfds);
+        int max_fd = serverSocket;
+	
+        for (int i = 0; i < num_clients; i++) {
+            if (clientSockets[i] != -1) {
+                FD_SET(clientSockets[i], &readfds);
+                if (clientSockets[i] > max_fd)
+                    max_fd = clientSockets[i];
             }
+        }
+        int activity = select(max_fd + 1, &readfds, NULL, NULL, NULL);
 
-            tempBuf[received] = '\0';
-            lineBuffer.append(tempBuf, received);
+        if (FD_ISSET(serverSocket, &readfds)) {
+		auto start = std::chrono::high_resolution_clock::now();
+            int newSocket = accept(serverSocket, NULL, NULL);
+		auto end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double,std::milli> fp_ms = end - start;
+		cout << "Accepted in " << fp_ms.count() << "ms\n";
+            if (newSocket == INVALID_SOCKET) {
+                cerr << "accept() failed" << endl;
+                break;
+            }
+            clientSockets[num_clients++] = newSocket;
+            cout << "New client connected: FD " << newSocket << endl;
+        }
+        for (int i = 0; i < num_clients; i++) {
+            int fd = clientSockets[i];
 
-            size_t pos;
-            while ((pos = lineBuffer.find('\n')) != string::npos) {
-                string line = lineBuffer.substr(0, pos);
-                lineBuffer.erase(0, pos + 1);
-                if (!line.empty() && line.back() == '\r') line.pop_back();
-                if (line.empty()) continue;
+            if (fd != -1 && FD_ISSET(fd, &readfds)) {
 
-                if (line == "EXIT")
-                {
-                    send_text(clientSocket, string("GOODBYE\r\n"));
-                    goto close_client;
+                string lineBuffer;
+                char tempBuf[1024];
+                int received = recv(fd, tempBuf, sizeof(tempBuf) - 1, 0);
+                if (received < 0) {
+                    continue;
                 }
+		if (received == 0){
+		    closesocket(fd);
+		    clientSockets[i] = -1;
+		    continue;
+		}
 
-                string ans = commandExecute(line);
-                send_text(clientSocket, ans);
+                tempBuf[received] = '\0';
+                lineBuffer.append(tempBuf, received);
+		//cout<<"Final message :"<<lineBuffer<<endl;
+                size_t pos;
+                while ((pos = lineBuffer.find('\n')) != string::npos) {
+                    string line = lineBuffer.substr(0, pos);
+                    lineBuffer.erase(0, pos + 1);
+
+                    if (!line.empty() && line.back() == '\n')
+                        line.pop_back();
+                    if (line.empty())
+                        continue;
+
+                    if (line == "EXIT") {
+                        send_text(fd, "GOODBYE\r\n");
+
+                        // Properly disconnect inside loop
+                        closesocket(fd);
+                        clientSockets[i] = -1;
+                        cout << "Client disconnected." << endl;
+                        break;
+                    }
+
+                    string ans = commandExecute(line);
+                    send_text(fd, ans);
+                }
             }
-        }
+        }	
+    }
 
-close_client:
-        closesocket(clientSocket);
-        cout << "Client disconnected." << endl;
+    // close all clients on exit
+    for (int i = 0; i < num_clients; i++) {
+        if (clientSockets[i] != -1)
+	    cout<<"Closed client socket "<<clientSockets[i]<<endl;
+            closesocket(clientSockets[i]);
     }
 
     closesocket(serverSocket);
     WSACleanup();
     return 0;
 }
+
+
+
