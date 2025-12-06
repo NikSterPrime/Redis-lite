@@ -3,6 +3,7 @@
 #include <winsock2.h>
 #include "datastore.h"
 #include <sys/time.h>
+#include <chrono>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -41,7 +42,7 @@ int main() {
         return 1;
     }
 
-    if (listen(serverSocket, 1) == SOCKET_ERROR) {
+    if (listen(serverSocket, 64) == SOCKET_ERROR) {
         cerr << "listen() failed" << endl;
         closesocket(serverSocket);
         WSACleanup();
@@ -64,7 +65,7 @@ int main() {
 
         FD_SET(serverSocket, &readfds);
         int max_fd = serverSocket;
-
+	
         for (int i = 0; i < num_clients; i++) {
             if (clientSockets[i] != -1) {
                 FD_SET(clientSockets[i], &readfds);
@@ -72,11 +73,14 @@ int main() {
                     max_fd = clientSockets[i];
             }
         }
-
         int activity = select(max_fd + 1, &readfds, NULL, NULL, NULL);
 
         if (FD_ISSET(serverSocket, &readfds)) {
+		auto start = std::chrono::high_resolution_clock::now();
             int newSocket = accept(serverSocket, NULL, NULL);
+		auto end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double,std::milli> fp_ms = end - start;
+		cout << "Accepted in " << fp_ms.count() << "ms\n";
             if (newSocket == INVALID_SOCKET) {
                 cerr << "accept() failed" << endl;
                 break;
@@ -84,7 +88,6 @@ int main() {
             clientSockets[num_clients++] = newSocket;
             cout << "New client connected: FD " << newSocket << endl;
         }
-
         for (int i = 0; i < num_clients; i++) {
             int fd = clientSockets[i];
 
@@ -93,17 +96,18 @@ int main() {
                 string lineBuffer;
                 char tempBuf[1024];
                 int received = recv(fd, tempBuf, sizeof(tempBuf) - 1, 0);
-
-                if (received <= 0) {
-                    // disconnect client
-                    closesocket(fd);
-                    clientSockets[i] = -1;
+                if (received < 0) {
                     continue;
                 }
+		if (received == 0){
+		    closesocket(fd);
+		    clientSockets[i] = -1;
+		    continue;
+		}
 
                 tempBuf[received] = '\0';
                 lineBuffer.append(tempBuf, received);
-
+		//cout<<"Final message :"<<lineBuffer<<endl;
                 size_t pos;
                 while ((pos = lineBuffer.find('\n')) != string::npos) {
                     string line = lineBuffer.substr(0, pos);
@@ -128,12 +132,13 @@ int main() {
                     send_text(fd, ans);
                 }
             }
-        }
+        }	
     }
 
     // close all clients on exit
     for (int i = 0; i < num_clients; i++) {
         if (clientSockets[i] != -1)
+	    cout<<"Closed client socket "<<clientSockets[i]<<endl;
             closesocket(clientSockets[i]);
     }
 
